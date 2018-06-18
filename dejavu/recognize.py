@@ -13,8 +13,10 @@ class BaseRecognizer(object):
 
     def _recognize(self, *data):
         matches = []
+        i=0
         for d in data:
-            matches.extend(self.dejavu.find_matches(d, Fs=self.Fs))
+            i +=1
+            matches.extend(self.dejavu.find_matches(d, Fs=self.Fs,i=i))
         return self.dejavu.align_matches(matches)
 
     def recognize(self):
@@ -33,7 +35,7 @@ class FileRecognizer(BaseRecognizer):
         t = time.time() - t
 
         if match:
-            match['match_time'] = t
+            match.append({'match_time': t})
 
         return match
 

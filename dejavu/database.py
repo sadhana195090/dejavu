@@ -10,6 +10,7 @@ class Database(object):
     FIELD_SONGNAME = 'song_name'
     FIELD_OFFSET = 'offset'
     FIELD_HASH = 'hash'
+    FIELD_RBT_ID = 'rbt_id'
 
     # Name of your Database subclass, this is used in configuration
     # to refer to your class

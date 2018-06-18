@@ -1,3 +1,4 @@
+from __future__ import print_function
 from dejavu.database import get_database, Database
 import dejavu.decoder as decoder
 import fingerprint
@@ -58,7 +59,7 @@ class Dejavu(object):
 
             # don't refingerprint already fingerprinted files
             if decoder.unique_hash(filename) in self.songhashes_set:
-                print "%s already fingerprinted, continuing..." % filename
+                print("%s already fingerprinted, continuing..." % filename)
                 continue
 
             filenames_to_fingerprint.append(filename)
@@ -99,7 +100,7 @@ class Dejavu(object):
         song_name = song_name or songname
         # don't refingerprint already fingerprinted files
         if song_hash in self.songhashes_set:
-            print "%s already fingerprinted, continuing..." % song_name
+            print("%s already fingerprinted, continuing..." % song_name)
         else:
             song_name, hashes, file_hash = _fingerprint_worker(
                 filepath,
@@ -112,9 +113,9 @@ class Dejavu(object):
             self.db.set_song_fingerprinted(sid)
             self.get_fingerprinted_songs()
 
-    def find_matches(self, samples, Fs=fingerprint.DEFAULT_FS):
+    def find_matches(self, samples, Fs=fingerprint.DEFAULT_FS, i=1):
         hashes = fingerprint.fingerprint(samples, Fs=Fs)
-        return self.db.return_matches(hashes)
+        return self.db.return_matches(hashes,i)
 
     def align_matches(self, matches):
         """
@@ -125,42 +126,92 @@ class Dejavu(object):
         """
         # align by diffs
         diff_counter = {}
-        largest = 0
-        largest_count = 0
-        song_id = -1
+        largest = [0,0,0]
+        largest_count = [0,0,0]
+        song_id = [-1,-1,-1]
+        total_hashes={}
         for tup in matches:
-            sid, diff = tup
+            sid, diff, hash_length= tup
+            total_hashes[hash_length.rsplit("_")[-1]]=int(hash_length.rsplit("_")[0])
             if diff not in diff_counter:
                 diff_counter[diff] = {}
             if sid not in diff_counter[diff]:
                 diff_counter[diff][sid] = 0
             diff_counter[diff][sid] += 1
+            #print (str(diff_counter[diff][sid]),str(diff),str(sid))
 
-            if diff_counter[diff][sid] > largest_count:
-                largest = diff
-                largest_count = diff_counter[diff][sid]
-                song_id = sid
+
+            if diff_counter[diff][sid] > largest_count[2]:
+
+                if diff_counter[diff][sid] > largest_count[1]:
+
+                    if diff_counter[diff][sid] > largest_count[0]:
+
+                        if(song_id[0]!=sid):
+
+                            largest[2]=largest[1]
+                            largest_count[2]=largest_count[1]
+                            song_id[2]=song_id[1]
+                            largest[1]=largest[0]
+                            largest_count[1]=largest_count[0]
+                            song_id[1]=song_id[0]
+                        largest[0] = diff
+                        largest_count[0] = diff_counter[diff][sid]
+                        song_id[0] = sid
+
+                    else:
+                        if(song_id[1]!=sid):
+                            largest[2]=largest[1]
+                            largest_count[2]=largest_count[1]
+                            song_id[2]=song_id[1]
+                        largest[1]=diff
+                        largest_count[1]=diff_counter[diff][sid]
+                        song_id[1]=sid
+
+                else:
+
+                    largest[2]=diff
+                    largest_count[2]=diff_counter[diff][sid]
+                    song_id[2]=sid
+            #print (song_id,largest_count)                
 
         # extract idenfication
-        song = self.db.get_song_by_id(song_id)
-        if song:
-            # TODO: Clarify what `get_song_by_id` should return.
-            songname = song.get(Dejavu.SONG_NAME, None)
-        else:
-            return None
+        songs = self.db.get_songs_by_ids(song_id)
+        songs1=[{},{},{}]
 
-        # return match info
-        nseconds = round(float(largest) / fingerprint.DEFAULT_FS *
-                         fingerprint.DEFAULT_WINDOW_SIZE *
-                         fingerprint.DEFAULT_OVERLAP_RATIO, 5)
-        song = {
-            Dejavu.SONG_ID : song_id,
-            Dejavu.SONG_NAME : songname,
-            Dejavu.CONFIDENCE : largest_count,
-            Dejavu.OFFSET : int(largest),
-            Dejavu.OFFSET_SECS : nseconds,
-            Database.FIELD_FILE_SHA1 : song.get(Database.FIELD_FILE_SHA1, None),}
-        return song
+        for i,s_id in enumerate(song_id):
+
+            songname=None
+            songhash=None
+            if i!=0 and s_id==song_id[i-1]:
+                songname=songs1[i-1].get(Dejavu.SONG_NAME,None)
+                songhash=songs1[i-1].get(Database.FIELD_FILE_SHA1,None)
+            else:
+                song=songs.next()
+                if song:
+                    # TODO: Clarify what `get_song_by_id` should return.
+                    songname = song.get(Dejavu.SONG_NAME, None)
+                    songhash=song.get(Database.FIELD_FILE_SHA1, None)
+                else:
+                    return None
+            
+            
+            
+
+            # return match info
+            nseconds = round(float(largest[i]) / fingerprint.DEFAULT_FS *
+                             fingerprint.DEFAULT_WINDOW_SIZE *
+                             fingerprint.DEFAULT_OVERLAP_RATIO, 5)
+            song1 = {
+                Dejavu.SONG_ID : s_id,
+                Dejavu.SONG_NAME : songname,
+                Dejavu.CONFIDENCE : largest_count[i],
+                "total_hashes"  :   sum(total_hashes.values()),
+                Dejavu.OFFSET : int(largest[i]),
+                Dejavu.OFFSET_SECS : nseconds,
+                Database.FIELD_FILE_SHA1 : songhash,}
+            songs1[i]=song1
+        return songs1
 
     def recognize(self, recognizer, *options, **kwoptions):
         r = recognizer(self)

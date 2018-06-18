@@ -93,16 +93,19 @@ def get_2D_peaks(arr2D, plot=False, amp_min=DEFAULT_AMP_MIN):
     # http://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.morphology.iterate_structure.html#scipy.ndimage.morphology.iterate_structure
     struct = generate_binary_structure(2, 1)
     neighborhood = iterate_structure(struct, PEAK_NEIGHBORHOOD_SIZE)
+    #print neighborhood.shape
 
     # find local maxima using our fliter shape
     local_max = maximum_filter(arr2D, footprint=neighborhood) == arr2D
+    #print local_max.shape
     background = (arr2D == 0)
+    #print background.shape
     eroded_background = binary_erosion(background, structure=neighborhood,
                                        border_value=1)
-
+    #print eroded_background.shape
     # Boolean mask of arr2D with True at peaks
     detected_peaks = local_max - eroded_background
-
+    #print detected_peaks.shape
     # extract peaks
     amps = arr2D[detected_peaks]
     j, i = np.where(detected_peaks)

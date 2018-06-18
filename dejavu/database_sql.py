@@ -107,8 +107,12 @@ class SQLDatabase(Database):
     """ % (Database.FIELD_SONG_ID, Database.FIELD_OFFSET, FINGERPRINTS_TABLENAME)
 
     SELECT_SONG = """
-        SELECT %s, HEX(%s) as %s FROM %s WHERE %s = %%s;
-    """ % (Database.FIELD_SONGNAME, Database.FIELD_FILE_SHA1, Database.FIELD_FILE_SHA1, SONGS_TABLENAME, Database.FIELD_SONG_ID)
+        SELECT %s, HEX(%s) as %s, %s FROM %s WHERE %s = %%s;
+    """ % (Database.FIELD_SONGNAME, Database.FIELD_FILE_SHA1, Database.FIELD_FILE_SHA1, Database.FIELD_RBT_ID, SONGS_TABLENAME, Database.FIELD_SONG_ID)
+
+    SELECT_SONG_MULTIPLE = """
+        SELECT %s, %s, HEX(%s) as %s, %s FROM %s WHERE %s in (%%s);
+    """ % (Database.FIELD_SONG_ID, Database.FIELD_SONGNAME, Database.FIELD_FILE_SHA1, Database.FIELD_FILE_SHA1, Database.FIELD_RBT_ID, SONGS_TABLENAME, Database.FIELD_SONG_ID)
 
     SELECT_NUM_FINGERPRINTS = """
         SELECT COUNT(*) as n FROM %s
@@ -227,6 +231,18 @@ class SQLDatabase(Database):
             cur.execute(self.SELECT_SONG, (sid,))
             return cur.fetchone()
 
+    def get_songs_by_ids(self, sids):
+        """
+        Returns songs by its IDs.
+        """
+        with self.cursor(cursor_type=DictCursor) as cur:
+            query=self.SELECT_SONG_MULTIPLE
+            query = query % ', '.join(['%s'] * len(sids))
+            cur.execute(query, sids)
+            
+            for row in cur:
+                yield row
+
     def insert(self, hash, sid, offset):
         """
         Insert a (sha1, song_id, offset) row into database.
@@ -276,15 +292,18 @@ class SQLDatabase(Database):
             for split_values in grouper(values, 1000):
                 cur.executemany(self.INSERT_FINGERPRINT, split_values)
 
-    def return_matches(self, hashes):
+    def return_matches(self, hashes, i):
         """
         Return the (song_id, offset_diff) tuples associated with
         a list of (sha1, sample_offset) values.
         """
         # Create a dictionary of hash => offset pairs for later lookups
         mapper = {}
+        hash_length=0
         for hash, offset in hashes:
             mapper[hash.upper()] = offset
+            hash_length +=1
+            
 
         # Get an iteratable of all the hashes we need
         values = mapper.keys()
@@ -299,7 +318,7 @@ class SQLDatabase(Database):
 
                 for hash, sid, offset in cur:
                     # (sid, db_offset - song_sampled_offset)
-                    yield (sid, offset - mapper[hash])
+                    yield (sid, offset - mapper[hash], str(hash_length)+"_"+str(i))
 
     def __getstate__(self):
         return (self._options,)
