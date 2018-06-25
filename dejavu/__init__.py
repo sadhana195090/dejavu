@@ -147,7 +147,7 @@ class Dejavu(object):
 
                     if diff_counter[diff][sid] > largest_count[0]:
 
-                        if(song_id[0]!=sid):
+                        if(song_id[0]!=sid and largest[0]!=diff):
 
                             largest[2]=largest[1]
                             largest_count[2]=largest_count[1]
@@ -160,7 +160,7 @@ class Dejavu(object):
                         song_id[0] = sid
 
                     else:
-                        if(song_id[1]!=sid):
+                        if(song_id[1]!=sid and largest[1]!=diff):
                             largest[2]=largest[1]
                             largest_count[2]=largest_count[1]
                             song_id[2]=song_id[1]
