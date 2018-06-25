@@ -174,28 +174,37 @@ class Dejavu(object):
                     largest_count[2]=diff_counter[diff][sid]
                     song_id[2]=sid
             #print (song_id,largest_count)                
-
-        # extract idenfication
-        songs = self.db.get_songs_by_ids(song_id)
         songs1=[{},{},{}]
 
+        if(all([s_id==-1 for s_id in song_id])):
+            return songs1
+        # extract idenfication
+        songs = self.db.get_songs_by_ids(song_id)
+        #print len(song_id)
         for i,s_id in enumerate(song_id):
+            #print(s_id)
 
             songname=None
             songhash=None
+            songrbtid=None
             if i!=0 and s_id==song_id[i-1]:
                 songname=songs1[i-1].get(Dejavu.SONG_NAME,None)
                 songhash=songs1[i-1].get(Database.FIELD_FILE_SHA1,None)
+                songrbtid=songs1[i-1].get(Database.FIELD_RBT_ID,None)
             else:
-                song=songs.next()
-                if song:
-                    # TODO: Clarify what `get_song_by_id` should return.
-                    songname = song.get(Dejavu.SONG_NAME, None)
-                    songhash=song.get(Database.FIELD_FILE_SHA1, None)
-                else:
-                    return None
+                try:
+                    song=songs.next()
+                    if song:
+                        # TODO: Clarify what `get_song_by_id` should return.
+                        songname = song.get(Dejavu.SONG_NAME, None)
+                        songhash=song.get(Database.FIELD_FILE_SHA1, None)
+                        songrbtid=song.get(Database.FIELD_RBT_ID,None)
+                    #else:
+                        #return None
             
-            
+                except Exception as e:
+                    print("error "+str(e))
+                    break
             
 
             # return match info
@@ -209,6 +218,7 @@ class Dejavu(object):
                 "total_hashes"  :   sum(total_hashes.values()),
                 Dejavu.OFFSET : int(largest[i]),
                 Dejavu.OFFSET_SECS : nseconds,
+                Database.FIELD_RBT_ID	: songrbtid,
                 Database.FIELD_FILE_SHA1 : songhash,}
             songs1[i]=song1
         return songs1

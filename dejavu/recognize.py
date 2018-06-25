@@ -34,8 +34,8 @@ class FileRecognizer(BaseRecognizer):
         match = self._recognize(*frames)
         t = time.time() - t
 
-        if match:
-            match.append({'match_time': t})
+        #if match:
+        match.append({'match_time': t})
 
         return match
 
