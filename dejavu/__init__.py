@@ -147,7 +147,7 @@ class Dejavu(object):
 
                     if diff_counter[diff][sid] > largest_count[0]:
 
-                        if(song_id[0]!=sid and largest[0]!=diff):
+                        if(song_id[0]!=sid or largest[0]!=diff):
 
                             largest[2]=largest[1]
                             largest_count[2]=largest_count[1]
@@ -160,7 +160,7 @@ class Dejavu(object):
                         song_id[0] = sid
 
                     else:
-                        if(song_id[1]!=sid and largest[1]!=diff):
+                        if(song_id[1]!=sid or largest[1]!=diff):
                             largest[2]=largest[1]
                             largest_count[2]=largest_count[1]
                             song_id[2]=song_id[1]
@@ -179,8 +179,16 @@ class Dejavu(object):
         if(all([s_id==-1 for s_id in song_id])):
             return songs1
         # extract idenfication
-        songs = self.db.get_songs_by_ids(song_id)
+        songs_g = self.db.get_songs_by_ids(song_id)
+        songs=[None,None,None]
+        for x in songs_g:
+            for i,x1 in enumerate(song_id):
+                if x.get(Database.FIELD_SONG_ID,None)==x1:
+                    songs[i]=x
+        
+        
         #print len(song_id)
+        
         for i,s_id in enumerate(song_id):
             #print(s_id)
 
@@ -193,7 +201,8 @@ class Dejavu(object):
                 songrbtid=songs1[i-1].get(Database.FIELD_RBT_ID,None)
             else:
                 try:
-                    song=songs.next()
+                    song=songs[i]
+                    
                     if song:
                         # TODO: Clarify what `get_song_by_id` should return.
                         songname = song.get(Dejavu.SONG_NAME, None)
