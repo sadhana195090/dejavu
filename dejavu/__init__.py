@@ -229,6 +229,8 @@ class Dejavu(object):
                 Dejavu.OFFSET_SECS : nseconds,
                 Database.FIELD_RBT_ID	: songrbtid,
                 Database.FIELD_FILE_SHA1 : songhash,}
+            song1["threshold"]=song1[Dejavu.CONFIDENCE]*1.0/song1["total_hashes"]
+
             songs1[i]=song1
         return songs1
 
